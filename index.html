@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Video Player</title>
+<style>
+    :root { color-scheme: dark; }
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 1rem; background: #111; color: #eee; }
+    h1 { font-size: 1.3rem; margin-top: 0; }
+    video { width: 100%; max-height: 70vh; background: #000; border-radius: 8px; display: block; }
+    #drop { border: 1px dashed #555; border-radius: 8px; padding: 1.2rem; text-align: center; margin-bottom: 1rem; cursor: pointer; }
+    #drop.dragover { border-color: #7cc0ff; background: #1a2a3a; }
+    button { background: #2a6fb5; color: #fff; border: 0; padding: .5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 1rem; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { padding: .5rem .8rem; border-bottom: 1px solid #333; display: flex; justify-content: space-between; gap: 1rem; cursor: pointer; }
+    li:hover, li.active { background: #1c2a3a; }
+    .size { color: #888; }
+    .now { color: #7cc0ff; font-weight: bold; margin: .6rem 0; min-height: 1.2em; }
+</style>
+</head>
+<body>
+<h1>🎬 Video Player</h1>
+
+<div id="drop">
+    <p style="margin:0 0 .6rem">Klik untuk pilih video, atau seret file ke sini</p>
+    <input type="file" id="file" accept="video/*" multiple hidden>
+    <button type="button" id="pick">Pilih Video…</button>
+</div>
+
+<div class="now" id="now"></div>
+<video id="video" controls playsinline></video>
+
+<ul id="list"></ul>
+
+<script>
+const video = document.getElementById('video');
+const list = document.getElementById('list');
+const now = document.getElementById('now');
+let urls = []; // object URL yang dibuat, dibersihkan saat ganti file
+
+// Video yang sudah ada di folder ini — path relatif, biar jalan di file:// maupun subfolder hosting
+const KNOWN = ['_Ghost in the cell~.mp4'];
+
+function addEntry(label, src, isBlob) {
+    const li = document.createElement('li');
+    li.innerHTML = '<span>▶ ' + label + '</span><span class="size"></span>';
+    li.onclick = () => play(src, label, isBlob);
+    list.appendChild(li);
+    if (!video.src) play(src, label, isBlob);
+}
+
+function addFiles(files) {
+    for (const f of files) {
+        if (!f.type.startsWith('video/')) continue;
+        const url = URL.createObjectURL(f);
+        urls.push(url);
+        addEntry(f.name, url, true);
+    }
+}
+
+function play(src, name, isBlob) {
+    if (!isBlob) { // file dari path asli: jangan di-revoke
+        urls.forEach(u => URL.revokeObjectURL(u));
+        urls = [];
+    } else {
+        for (const u of urls) if (u !== src) URL.revokeObjectURL(u);
+        urls = [src];
+    }
+    video.src = src;
+    video.play();
+    now.textContent = '▶ ' + name;
+    [...list.children].forEach(li => li.classList.remove('active'));
+    [...list.children].forEach(li => {
+        if (li.textContent.includes(name)) li.classList.add('active');
+    });
+}
+
+// Muat video yang sudah ada di folder secara otomatis
+KNOWN.forEach(n => addEntry(n, n, false));
+
+function fmt(bytes) {
+    const g = bytes / 1073741824;
+    if (g >= 1) return g.toFixed(2) + ' GB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+const pick = document.getElementById('pick');
+pick.onclick = () => document.getElementById('file').click();
+document.getElementById('file').onchange = e => addFiles(e.target.files);
+
+const drop = document.getElementById('drop');
+drop.onclick = () => document.getElementById('file').click();
+['dragover', 'dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('dragover'); }));
+drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+</script>
+</body>
+</html>

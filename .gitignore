@@ -1,0 +1,6 @@
+# File media terlalu besar untuk GitHub (batas 100MB/file)
+*.mp4
+*.webm
+*.mov
+*.mkv
+*.zip
